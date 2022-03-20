@@ -47,7 +47,7 @@ object SaveTest {
 
     // 从socket服务中读取数据流（指定socket服务的主机名和端口），结果封装为ReceiverInputDStream
     val ds = streamingContext.socketTextStream("node0", 9999)
-    val resDS =
+    val resDS : DStream[(String, Int)] =
     // 将每行数据按空格切分，每行一个单词，生成新的DStream
       ds.flatMap(line => line.split(" "))
         // 对每行的单词的出现次数计数1

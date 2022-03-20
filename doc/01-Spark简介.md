@@ -1,4 +1,17 @@
-# 1. 什么是Spark？
+---
+title: Spark简介
+author: theonly
+---
+
+###### Spark简介
+
+
+
+[TOC]
+
+
+
+# 什么是Spark？
 
 Apache Spark 是专门为大规模数据处理而设计的快速通用的计算分析引擎
 
@@ -8,7 +21,7 @@ Spark是Scala语言编写，方便快速编程。
 
 [Spark官网](http://spark.apache.org/docs/2.3.1/)
 
-# 2. Spark特点
+# Spark特点
 
 1. 快速
     ‎Apache Spark 使用最先进的 DAG 调度器、查询优化器和物理执行引擎，为批量和流式传输数据实现高性能。‎
@@ -20,14 +33,14 @@ Spark是Scala语言编写，方便快速编程。
     Spark可以运行在standalone cluster mode（独立集群模式）、EC2、Hadoop YARN、Mesos、 Kubernetes上；访问HDFS、Alluxio、Apache Cassandra、Apache HBase、Apache Hive和其他数据源中的数据
     
     
-# 3. Spark技术栈
+# Spark技术栈
 ![Spark技术栈](./img/Spark技术栈.png)
 
-# 4. Spark和MapReduce的区别
+# Spark和MapReduce的区别
 都是分布式计算框架，Spark基于内存，MR基于HDFS。
 Spark处理数据的能力一般是MR的十倍以上，Spark中除了基于内存计算外，还有DAG有向无环图来切分任务的执行先后顺序。
 
-# 5. Spark运行模式
+# Spark运行模式
 - Local
 
     多用于本地测试，如在eclipse，idea中写程序测试等。
@@ -42,6 +55,10 @@ Spark处理数据的能力一般是MR的十倍以上，Spark中除了基于内�
 - Mesos
 
     资源调度框架。
-    
 
 > 要基于Yarn来进行资源调度，必须实现AppalicationMaster接口，Spark实现了这个接口，所以可以基于Yarn。
+
+
+
+###### THANKS
+

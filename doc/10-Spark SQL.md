@@ -1,24 +1,33 @@
-# SparkSQL介绍
+---
+title: Spark SQL
+author: theonly
+---
 
-# 1. Shark
+###### Spark SQL
+
+[TOC]
+
+
+
+# Shark
 Shark是基于Spark计算框架之上且兼容Hive语法的SQL执行引擎，由于底层的计算采用了Spark，性能比MapReduce的Hive普遍快2倍以上，当数据全部load在内存的话，将快10倍以上，因此Shark可以作为交互式查询应用服务来使用。除了基于Spark的特性外，Shark是完全兼容Hive的语法，表结构以及UDF函数等，已有的HiveSql可以直接进行迁移至Shark上Shark底层依赖于Hive的解析器，查询优化器，但正是由于SHark的整体设计架构对Hive的依赖性太强，难以支持其长远发展，比如不能和Spark的其他组件进行很好的集成，无法满足Spark的一栈式解决大数据处理的需求。
 
-# 2. SparkSQL
+# SparkSQL
 
-## 2.1 SparkSQL介绍
+## SparkSQL介绍
 
 Hive是Shark的前身，Shark是SparkSQL的前身,SparkSQL产生的根本原因是其完全脱离了Hive的限制。
 
 - SparkSQL支持查询原生的RDD。 RDD是Spark平台的核心概念，是Spark能够高效的处理大数据的各种场景的基础。
 - 能够在Scala中写SQL语句。支持简单的SQL语法检查，能够在Scala中写Hive语句访问Hive数据，并将结果取回作为RDD使用。
 
-## 2.2 Spark on Hive和Hive on Spark
+## Spark on Hive和Hive on Spark
 
 Spark on Hive：Hive只作为储存角色，Spark负责sql解析优化，执行。
 
 Hive on Spark：Hive即作为存储又负责sql的解析优化，Spark负责执行。
 
-## 2.3 DataFrame
+## DataFrame
 
 DataFrame也是一个分布式数据容器。
 
@@ -30,21 +39,21 @@ DataFrame也是一个分布式数据容器。
 
 ***DataFrame就Row类型的DataSet***
 
-## 2.4 SparkSQL的数据源
+## SparkSQL的数据源
 
 SparkSQL的数据源可以是JSON类型的字符串，JDBC,Parquent,Hive，HDFS等。
 
-## 2.5 SparkSQL底层架构
+## SparkSQL底层架构
 
 首先拿到sql后解析一批未被解决的逻辑计划，再经过分析得到分析后的逻辑计划，再经过一批优化规则转换成一批最佳优化的逻辑计划，再经过SparkPlanner的策略转化成一批物理计划，随后经过消费模型转换成一个个的Spark任务执行。
 
-## 2.6 谓词下推（predicate Pushdown）
+## 谓词下推（predicate Pushdown）
 ![谓词下推](./img/谓词下推.png)
 
 
-# 3. 创建DataFrame的方式
+# 创建DataFrame的方式
 
-## 3.1 读取json格式的文件创建DataFrame
+## 读取json格式的文件创建DataFrame
 
 注意：
 1. 可以两种方式读取json格式的文件。
@@ -82,7 +91,7 @@ SparkSQL的数据源可以是JSON类型的字符串，JDBC,Parquent,Hive，HDFS�
     df.javaRdd();
     ```
 
-## 3.2 通过json格式的RDD创建DataFrame
+## 通过json格式的RDD创建DataFrame
 java：
 
 `top.theonly.spark.jav.sql.textfile.CreateDataFrameByRddTest.createDataFrameByJsonRDD()`
@@ -91,9 +100,9 @@ scala：
 
 `top.theonly.spark.sca.sql.textfile.SparkReadCsvTest.CreateDataFrameByRddTest.createDataFrameByJsonRDD()`
 
-## 3.3 非json格式的RDD创建DataFrame
+## 非json格式的RDD创建DataFrame
 
-### 3.3.1 反射
+### 反射
 通过反射的方式将非json格式的RDD转换成DataFrame（不建议使用）
 - 自定义类要可序列化
 - 自定义类的访问级别是Public
@@ -108,7 +117,7 @@ scala：
 
 `top.theonly.spark.sca.sql.textfile.SparkReadCsvTest.CreateDataFrameByRddTest.createDataFrameByRDDUseReflect()`
 
-### 3.3.2 动态创建Schema将非json格式的RDD转换成DataFrame
+### 动态创建Schema将非json格式的RDD转换成DataFrame
 
 java：
 
@@ -118,7 +127,7 @@ scala：
 
 `top.theonly.spark.sca.sql.textfile.SparkReadCsvTest.CreateDataFrameByRddTest.createDataFrameByRDDByDynamicSchema()`
 
-## 3.4 读取parquet文件创建DataFrame
+## 读取parquet文件创建DataFrame
 
 可以将DataFrame存储成parquet文件。
 
@@ -136,7 +145,7 @@ scala：
 
 `top.theonly.spark.sca.sql.parquet.SparkParquetFileTest`
 
-## 3.5 读取JDBC中的数据创建DataFrame(MySql为例)
+## 读取JDBC中的数据创建DataFrame(MySql为例)
 
 java：
 
@@ -146,7 +155,7 @@ scala：
 
 `top.theonly.spark.sca.sql.jdbc.SparkOnJdbcTest`
 
-## 3.6 读取csv文件创建DataFrame
+## 读取csv文件创建DataFrame
 
 java：
 
@@ -156,9 +165,10 @@ scala：
 
 `top.theonly.spark.sca.sql.textfile.SparkReadCsvTest`
 
-# 4. Spark on Hive
+# Spark on Hive
 
-# 4.1 配置
+## 配置
+
 1. 在Spark客户端配置Hive On Spark
 
     在Spark客户端安装包下spark-2.3.1/conf中创建文件hive-site.xml：
@@ -197,14 +207,13 @@ scala：
     hc.sql("user default").show
     hc.sql("select count(*) from jizhan").show
     ```
-**注意**：
+    **注意**：
     
     如果使用Spark on Hive  查询数据时，出现错误：
     Caused by: java.net.UnknownHostException: ...
     找不到HDFS集群路径，要在客户端机器conf/spark-env.sh中设置HDFS的路径：
     export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
-    
-## 4.2 读取Hive中的数据加载成DataFrame
+## 读取Hive中的数据加载成DataFrame
 在Spark1.6版本中HiveContext是SQLContext的子类，连接Hive使用HiveContext。
 
 在Spark2.0+版本中之后，建议使用SparkSession对象，读取Hive中的数据需要开启Hive支持。
@@ -221,7 +230,7 @@ scala：
 /root/test/spark-code.jar
 ```
 
-# 5. DataFrame存储
+# DataFrame存储
 1. 将DataFrame存储为parquet文件。
     ```scala
     df.write.mode(SaveMode.Overwrite).parquet(parquetFilePath)
@@ -235,10 +244,10 @@ scala：
     ```scala
     df.write.mode(SaveMode.Overwrite).saveAsTable(tableName);
     ```
-   
-# 6. Spark UDF和UDAF函数
 
-# 6.1 UDF 用户自定义函数
+# Spark UDF和UDAF函数
+
+## UDF 用户自定义函数
 
 可以自定义类实现UDFX接口
 
@@ -250,7 +259,7 @@ scala：
 
 `top.theonly.spark.sca.sql.udf.SparkUDFTest`
 
-# 6.2 UDAF:用户自定义聚合函数
+## UDAF:用户自定义聚合函数
 
 实现UDAF函数如果要自定义类要继承`UserDefinedAggregateFunction`类.
 
@@ -265,7 +274,7 @@ scala：
 `top.theonly.spark.sca.sql.udf.SparkUDAFTest`
 
 
-# 7. 开窗函数 over()
+# 开窗函数 over()
 
 开窗函数格式：
 
@@ -280,3 +289,8 @@ java：
 scala：
 
 `top.theonly.spark.sca.sql.over.SparkOverFuncTest`
+
+
+
+###### THANKS
+

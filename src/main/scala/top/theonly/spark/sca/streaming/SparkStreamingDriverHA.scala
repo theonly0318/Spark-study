@@ -24,7 +24,7 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext
  */
 object SparkStreamingDriverHA {
   /** checkpoint目录 */
-    private val CHECKPOINT_DIR = "./data/streaming/driver_ha_ck"
+  private val CHECKPOINT_DIR = "./data/streaming/driver_ha_ck"
 
   @throws[InterruptedException]
   def main(args: Array[String]) = {

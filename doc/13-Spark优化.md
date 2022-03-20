@@ -1,7 +1,16 @@
+---
+title: Spark 优化
+author: theonly
+---
 
-# 1. 资源优化
+###### Spark 优化
+
+[TOC]
+
+# 资源优化
+
 1. 搭建Spark集群的时候要给Spark集群足够的资源（core，memory）
-    
+   
     在spark安装包的conf下spark-env.sh 
     - SPARK_WORKER_CORES
     - SPARK_WORKER_MEMORY
@@ -18,8 +27,7 @@
        - spark.executor.cores
        - spark.executor.memory
        - spark.max.cores
-        
-# 2. Spark并行度优化
+# Spark并行度优化
 
 原则：一个core一般分配2~3个task,每一个task一般处理1G数据（task的复杂度类似wc）
 
@@ -36,115 +44,177 @@
 9. 自定义分区器
 10. SparkStreaming: Direct模式 
 
-# 3. Spark代码优化
+# Spark代码优化
 
 1. 避免创建重复的RDD，复用同一个RDD
 
+
+
 2. 对多次使用的RDD进行持久化
 
-    如何选择一种最合适的持久化策略？
-    
-    默认情况下，性能最高的当然是MEMORY_ONLY，但前提是你的内存必须足够足够大，可以绰绰有余地存放下整个RDD的所有数据。因为不进行序列化与反序列化操作，就避免了这部分的性能开销；对这个RDD的后续算子操作，都是基于纯内存中的数据的操作，不需要从磁盘文件中读取数据，性能也很高；而且不需要复制一份数据副本，并远程传送到其他节点上。但是这里必须要注意的是，在实际的生产环境中，恐怕能够直接用这种策略的场景还是有限的，如果RDD中数据比较多时（比如几十亿），直接用这种持久化级别，会导致JVM的OOM内存溢出异常。
-    
-    如果使用MEMORY_ONLY级别时发生了内存溢出，那么建议尝试使用MEMORY_ONLY_SER级别。该级别会将RDD数据序列化后再保存在内存中，此时每个partition仅仅是一个字节数组而已，大大减少了对象数量，并降低了内存占用。这种级别比MEMORY_ONLY多出来的性能开销，主要就是序列化与反序列化的开销。但是后续算子可以基于纯内存进行操作，因此性能总体还是比较高的。此外，可能发生的问题同上，如果RDD中的数据量过多的话，还是可能会导致OOM内存溢出的异常。
-    
-    如果纯内存的级别都无法使用，那么建议使用MEMORY_AND_DISK_SER策略，而不是MEMORY_AND_DISK策略。因为既然到了这一步，就说明RDD的数据量很大，内存无法完全放下。序列化后的数据比较少，可以节省内存和磁盘的空间开销。同时该策略会优先尽量尝试将数据缓存在内存中，内存缓存不下才会写入磁盘。
-    
-    通常不建议使用DISK_ONLY和后缀为_2的级别：因为完全基于磁盘文件进行数据的读写，会导致性能急剧降低，有时还不如重新计算一次所有RDD。后缀为_2的级别，必须将所有数据都复制一份副本，并发送到其他节点上，数据复制以及网络传输会导致较大的性能开销，除非是要求作业的高可用性，否则不建议使用。
+   **如何选择一种最合适的持久化策略？**
 
-    持久化算子：
-    cache:
-    	MEMORY_ONLY
-    persist：
-    	MEMORY_ONLY
-    	MEMORY_ONLY_SER
-    	MEMORY_AND_DISK_SER
-    	一般不要选择带有_2的持久化级别。
-    checkpoint:
-    1. 如果一个RDD的计算时间比较长或者计算起来比较复杂，一般将这个RDD的计算结果保存到HDFS上，这样数据会更加安全。
-    2. 如果一个RDD的依赖关系非常长，也会使用checkpoint,会切断依赖关系，提高容错的效率。
+   
+
+   默认情况下，性能最高的当然是MEMORY_ONLY，但前提是你的内存必须足够足够大，可以绰绰有余地存放下整个RDD的所有数据。因为不进行序列化与反序列化操作，就避免了这部分的性能开销；对这个RDD的后续算子操作，都是基于纯内存中的数据的操作，不需要从磁盘文件中读取数据，性能也很高；而且不需要复制一份数据副本，并远程传送到其他节点上。但是这里必须要注意的是，在实际的生产环境中，恐怕能够直接用这种策略的场景还是有限的，如果RDD中数据比较多时（比如几十亿），直接用这种持久化级别，会导致JVM的OOM内存溢出异常。
+
+   
+
+   如果使用MEMORY_ONLY级别时发生了内存溢出，那么建议尝试使用MEMORY_ONLY_SER级别。该级别会将RDD数据序列化后再保存在内存中，此时每个partition仅仅是一个字节数组而已，大大减少了对象数量，并降低了内存占用。这种级别比MEMORY_ONLY多出来的性能开销，主要就是序列化与反序列化的开销。但是后续算子可以基于纯内存进行操作，因此性能总体还是比较高的。此外，可能发生的问题同上，如果RDD中的数据量过多的话，还是可能会导致OOM内存溢出的异常。
+
+   
+
+   如果纯内存的级别都无法使用，那么建议使用MEMORY_AND_DISK_SER策略，而不是MEMORY_AND_DISK策略。因为既然到了这一步，就说明RDD的数据量很大，内存无法完全放下。序列化后的数据比较少，可以节省内存和磁盘的空间开销。同时该策略会优先尽量尝试将数据缓存在内存中，内存缓存不下才会写入磁盘。
+
+   
+
+   通常不建议使用DISK_ONLY和后缀为_2的级别：因为完全基于磁盘文件进行数据的读写，会导致性能急剧降低，有时还不如重新计算一次所有RDD。后缀为_2的级别，必须将所有数据都复制一份副本，并发送到其他节点上，数据复制以及网络传输会导致较大的性能开销，除非是要求作业的高可用性，否则不建议使用。
+
+   
+
+   持久化算子：
+   cache:
+   	MEMORY_ONLY
+
+   
+
+   persist：
+   	MEMORY_ONLY
+   	MEMORY_ONLY_SER
+   	MEMORY_AND_DISK_SER
+   	一般不要选择带有_2的持久化级别。
+
+   
+
+   checkpoint:
+
+   1. 如果一个RDD的计算时间比较长或者计算起来比较复杂，一般将这个RDD的计算结果保存到HDFS上，这样数据会更加安全。
+   2. 如果一个RDD的依赖关系非常长，也会使用checkpoint,会切断依赖关系，提高容错的效率。
+
+
 
 3. 尽量避免使用shuffle类的算子
 
-    使用广播变量来模拟使用join,使用情况：一个RDD比较大，一个RDD比较小。
-    
-    join算子=广播变量+filter、广播变量+map、广播变量+flatMap
-    
+   使用广播变量来模拟使用join,使用情况：一个RDD比较大，一个RDD比较小。
+
+   
+
+   join算子=广播变量+filter、广播变量+map、广播变量+flatMap
+
+
+
 4. 使用map-side预聚合的shuffle操作
 
-    即尽量使用有combiner的shuffle类算子。
+   即尽量使用有combiner的shuffle类算子。
 
-    combiner概念：
-	    在map端，每一个map task计算完毕后进行的局部聚合。
+   
 
-    combiner好处：
-    1. 降低shuffle write写磁盘的数据量。
-    2. 降低shuffle read拉取数据量的大小。
-    3. 降低reduce端聚合的次数。
+   combiner概念：
+       在map端，每一个map task计算完毕后进行的局部聚合。
 
-    有combiner的shuffle类算子：
-    1. reduceByKey:这个算子在map端是有combiner的，在一些场景中可以使用reduceByKey代替groupByKey。
-    2. aggregateByKey
-    3. combineByKey
-    
+   
+
+   combiner好处：
+
+   1. 降低shuffle write写磁盘的数据量。
+   2. 降低shuffle read拉取数据量的大小。
+   3. 降低reduce端聚合的次数。
+
+   
+
+   有combiner的shuffle类算子：
+
+   1. reduceByKey:这个算子在map端是有combiner的，在一些场景中可以使用reduceByKey代替groupByKey。
+   2. aggregateByKey
+   3. combineByKey
+
+
+
 5. 尽量使用高性能的算子
-    - 使用reduceByKey替代groupByKey
-    - 使用mapPartition替代map
-    - 使用foreachPartition替代foreach
-    - filter后使用coalesce减少分区数
-    - 使用repartitionAndSortWithinPartitions替代repartition与sort类操作
-    - 使用repartition和coalesce算子操作分区。
-    
+
+- 使用reduceByKey替代groupByKey
+- 使用mapPartition替代map
+- 使用foreachPartition替代foreach
+- filter后使用coalesce减少分区数
+- 使用repartitionAndSortWithinPartitions替代repartition与sort类操作
+- 使用repartition和coalesce算子操作分区。
+
+
+
 6. 使用广播变量
 
-开发过程中，会遇到需要在算子函数中使用外部变量的场景（尤其是大变量，比如100M以上的大集合），那么此时就应该使用Spark的广播(Broadcast）功能来提升性能。
+   开发过程中，会遇到需要在算子函数中使用外部变量的场景（尤其是大变量，比如100M以上的大集合），那么此时就应该使用Spark的广播(Broadcast）功能来提升性能。
 
-函数中使用到外部变量时，默认情况下，Spark会将该变量复制多个副本，通过网络传输到task中，此时每个task都有一个变量副本。
+   
 
-如果变量本身比较大的话（比如100M，甚至1G），那么大量的变量副本在网络中传输的性能开销，以及在各个节点的Executor中占用过多内存导致的频繁GC，都会极大地影响性能。
+   函数中使用到外部变量时，默认情况下，Spark会将该变量复制多个副本，通过网络传输到task中，此时每个task都有一个变量副本。
 
-如果使用的外部变量比较大，建议使用Spark的广播功能，对该变量进行广播。广播后的变量，会保证每个Executor的内存中，只驻留一份变量副本，而Executor中的task执行时共享该Executor中的那份变量副本。
-这样的话，可以大大减少变量副本的数量，从而减少网络传输的性能开销，并减少对Executor内存的占用开销，降低GC的频率。
+   
 
-广播大变量发送方式：Executor一开始并没有广播变量，而是task运行需要用到广播变量，会找executor的blockManager要，blockManager找Driver里面的blockManagerMaster要。
+   如果变量本身比较大的话（比如100M，甚至1G），那么大量的变量副本在网络中传输的性能开销，以及在各个节点的Executor中占用过多内存导致的频繁GC，都会极大地影响性能。
 
-使用广播变量可以大大降低集群中变量的副本数。不使用广播变量，变量的副本数和task数一致。使用广播变量变量的副本和Executor数一致。
+   
+
+   如果使用的外部变量比较大，建议使用Spark的广播功能，对该变量进行广播。广播后的变量，会保证每个Executor的内存中，只驻留一份变量副本，而Executor中的task执行时共享该Executor中的那份变量副本。
+
+   
+
+   这样的话，可以大大减少变量副本的数量，从而减少网络传输的性能开销，并减少对Executor内存的占用开销，降低GC的频率。
+
+   
+
+   广播大变量发送方式：Executor一开始并没有广播变量，而是task运行需要用到广播变量，会找executor的blockManager要，blockManager找Driver里面的blockManagerMaster要。
+
+   
+
+   使用广播变量可以大大降低集群中变量的副本数。不使用广播变量，变量的副本数和task数一致。使用广播变量变量的副本和Executor数一致。
+
+
 
 7. 使用Kryo优化序列化性能
 
-在Spark中，主要有三个地方涉及到了序列化：
+   在Spark中，主要有三个地方涉及到了序列化：
 
-1. 在算子函数中使用到外部变量时，该变量会被序列化后进行网络传输。
-2. 将自定义的类型作为RDD的泛型类型时（比如JavaRDD<SXT>，SXT是自定义类型），所有自定义类型对象，都会进行序列化。因此这种情况下，也要求自定义的类必须实现Serializable接口。
-3. 使用可序列化的持久化策略时（比如MEMORY_ONLY_SER），Spark会将RDD中的每个partition都序列化成一个大的字节数组。
+   1. 在算子函数中使用到外部变量时，该变量会被序列化后进行网络传输。
+   2. 将自定义的类型作为RDD的泛型类型时（比如JavaRDD<SXT>，SXT是自定义类型），所有自定义类型对象，都会进行序列化。因此这种情况下，也要求自定义的类必须实现Serializable接口。
+   3. 使用可序列化的持久化策略时（比如MEMORY_ONLY_SER），Spark会将RDD中的每个partition都序列化成一个大的字节数组。
 
-Kryo序列化器介绍：
+   
 
-Spark支持使用Kryo序列化机制。Kryo序列化机制，比默认的Java序列化机制，速度要快，序列化后的数据要更小，大概是Java序列化机制的1/10。所以Kryo序列化优化以后，可以让网络传输的数据变少；在集群中耗费的内存资源大大减少。 
+   Kryo序列化器介绍：
 
-对于这三种出现序列化的地方，我们都可以通过使用Kryo序列化类库，来优化序列化和反序列化的性能。Spark默认使用的是Java的序列化机制，也就是ObjectOutputStream/ObjectInputStream API来进行序列化和反序列化。但是Spark同时支持使用Kryo序列化库，Kryo序列化类库的性能比Java序列化类库的性能要高很多。官方介绍，Kryo序列化机制比Java序列化机制，性能高10倍左右。Spark之所以默认没有使用Kryo作为序列化类库，是因为Kryo要求最好要注册所有需要进行序列化的自定义类型，因此对于开发者来说，这种方式比较麻烦。
+   Spark支持使用Kryo序列化机制。Kryo序列化机制，比默认的Java序列化机制，速度要快，序列化后的数据要更小，大概是Java序列化机制的1/10。所以Kryo序列化优化以后，可以让网络传输的数据变少；在集群中耗费的内存资源大大减少。 
 
-Spark中使用Kryo：
-```java
-sparkconf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-sparkconf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer").registerKryoClasses(new Class[]{SpeedSortKey.class})
-```
+   
+
+   对于这三种出现序列化的地方，我们都可以通过使用Kryo序列化类库，来优化序列化和反序列化的性能。Spark默认使用的是Java的序列化机制，也就是ObjectOutputStream/ObjectInputStream API来进行序列化和反序列化。但是Spark同时支持使用Kryo序列化库，Kryo序列化类库的性能比Java序列化类库的性能要高很多。官方介绍，Kryo序列化机制比Java序列化机制，性能高10倍左右。Spark之所以默认没有使用Kryo作为序列化类库，是因为Kryo要求最好要注册所有需要进行序列化的自定义类型，因此对于开发者来说，这种方式比较麻烦。
+
+   
+
+   Spark中使用Kryo：
+
+   ```java
+   sparkconf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+   sparkconf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer").registerKryoClasses(new Class[]{SpeedSortKey.class})
+   ```
+
+
 
 8. 优化数据结构
 
-java中有三种类型比较消耗内存：
+   java中有三种类型比较消耗内存：
 
-1. 对象，每个Java对象都有对象头、引用等额外的信息，因此比较占用内存空间。
+   1. 对象，每个Java对象都有对象头、引用等额外的信息，因此比较占用内存空间。
 
-2. 字符串，每个字符串内部都有一个字符数组以及长度等额外信息。
+   2. 字符串，每个字符串内部都有一个字符数组以及长度等额外信息。
 
-3. 集合类型，比如HashMap、LinkedList等，因为集合类型内部通常会使用一些内部类来封装集合元素，比如Map.Entry。
+   3. 集合类型，比如HashMap、LinkedList等，因为集合类型内部通常会使用一些内部类来封装集合元素，比如Map.Entry。
 
-因此Spark官方建议，在Spark编码实现中，特别是对于算子函数中的代码，尽量不要使用上述三种数据结构，尽量使用字符串替代对象，使用原始类型（比如Int、Long）替代字符串，使用数组替代集合类型，这样尽可能地减少内存占用，从而降低GC频率，提升性能。
+   因此Spark官方建议，在Spark编码实现中，特别是对于算子函数中的代码，尽量不要使用上述三种数据结构，尽量使用字符串替代对象，使用原始类型（比如Int、Long）替代字符串，使用数组替代集合类型，这样尽可能地减少内存占用，从而降低GC频率，提升性能。
 
-# 4. 数据本地化
+# 数据本地化
 
-## 4.1 数据本地化的级别：
+## 数据本地化的级别：
 
 1. PROCESS_LOCAL
 
@@ -166,14 +236,13 @@ java中有三种类型比较消耗内存：
 5. ANY
 
     跨机架。
-    
-## 4.2 Spark数据本地化调优
+## Spark数据本地化调优
 
 Spark中任务调度时，TaskScheduler在分发之前需要依据数据的位置来分发，最好将task分发到数据所在的节点上，如果TaskScheduler分发的task在默认3s依然无法执行的话，TaskScheduler会重新发送这个task到相同的Executor中去执行，会重试5次，如果依然无法执行，那么TaskScheduler会降低一级数据本地化的级别再次发送task。
 
 如上图中，会先尝试1,PROCESS_LOCAL数据本地化级别，如果重试5次每次等待3s,会默认这个Executor计算资源满了，那么会降低一级数据本地化级别到2，NODE_LOCAL,如果还是重试5次每次等待3s还是失败，那么还是会降低一级数据本地化级别到3，RACK_LOCAL。这样数据就会有网络传输，降低了执行效率。
 
-### 4.2.1 如何提高数据本地化的级别？
+### 如何提高数据本地化的级别？
 
 可以增加每次发送task的等待时间（默认都是3s），将3s倍数调大，	结合WEBUI来调节：
 
@@ -184,10 +253,10 @@ Spark中任务调度时，TaskScheduler在分发之前需要依据数据的位�
 
 **注意**：等待时间不能调大很大，调整数据本地化的级别不要本末倒置，虽然每一个task的本地化级别是最高了，但整个Application的执行时间反而加长。
 
-### 4.2.2 如何查看数据本地化的级别？
+### 如何查看数据本地化的级别？
 通过日志或者WEBUI
 
-# 5. 内存调优
+# 内存调优
 
 JVM堆内存分为一块较大的Eden和两块较小的Survivor，每次只使用Eden和其中一块Survivor，当回收时将Eden和Survivor中还存活着的对象一次性复制到另外一块Survivor上，最后清理掉Eden和刚才用过的Survivor。也就是说当task创建出来对象会首先往Eden和survivor1中存放，survivor2是空闲的，当Eden和survivor1区域放满以后就会触发minor gc小型垃圾回收，清理掉不再使用的对象。会将存活下来的对象放入survivor2中。
 
@@ -217,34 +286,38 @@ Spark Executor堆内存中存放（以静态内存管理为例）：RDD的缓存
 Spark WEBUI中job->stage->task
 
 
-# 6. SparkShuffle优化
+# SparkShuffle优化
 
 - spark.reducer.maxSizeInFlight  48M
 - spark.shuffle.io.maxRetries 3
 - spark.shuffle.io.retryWait 5s
 - spark.shuffle.sort.bypassMergeThreshold
 
-# 7. 堆外内存优化
+# 堆外内存优化
 
 Spark底层shuffle的传输方式是使用netty传输，netty在进行网络传输的过程会申请堆外内存（netty是零拷贝），所以使用了堆外内存。默认情况下，这个堆外内存上限默认是每一个executor的内存大小的10%，最小为384M，真正处理大数据的时候，这里都会出现问题，导致spark作业反复崩溃，无法运行；此时就会去调节这个参数，到至少1G（1024M），甚至说2G、4G。
 
 executor在进行shuffle write，优先从自己本地关联的mapOutPutWorker中获取某份数据，如果本地block manager没有的话，那么会通过TransferService，去远程连接其他节点上executor的block manager去获取，尝试建立远程的网络连接，并且去拉取数据。频繁创建对象让JVM堆内存满溢，进行垃圾回收。正好碰到那个executor的JVM在垃圾回收。处于垃圾回过程中，所有的工作线程全部停止；相当于只要一旦进行垃圾回收，spark / executor停止工作，无法提供响应，spark默认的网络连接的超时时长是120s；如果卡住120s都无法建立连接的话，那么这个task就失败了。**task失败了就会出现shuffle file cannot find的错误**。
 
-#### 那么如何调节等待的时长呢？
 
-在./spark-submit提交任务的脚本里面添加：`--conf spark.core.connection.ack.wait.timeout=300`
 
-如果以上参数没有设置，那么就会使用`spark.network.timeout`参数，默认120s。
+1. **那么如何调节等待的时长呢？**
 
-Executor由于内存不足或者堆外内存不足了，挂掉了，对应的Executor上面的block manager也挂掉了，找不到对应的shuffle map output文件，Reducer端不能够拉取数据。
+   在./spark-submit提交任务的脚本里面添加：`--conf spark.core.connection.ack.wait.timeout=300`
 
-#### 我们可以调节堆外内存的大小，如何调节？
+   如果以上参数没有设置，那么就会使用`spark.network.timeout`参数，默认120s。
 
-在./spark-submit提交任务的脚本里面添加 `--conf  spark.executor.memoryOverhead=2048M`
+   Executor由于内存不足或者堆外内存不足了，挂掉了，对应的Executor上面的block manager也挂掉了，找不到对应的shuffle map output文件，Reducer端不能够拉取数据。
 
-# 8. 解决数据倾斜
 
-## 8.1 使用Hive ETL预处理数据
+
+2. **我们可以调节堆外内存的大小，如何调节？**
+
+   在./spark-submit提交任务的脚本里面添加 `--conf  spark.executor.memoryOverhead=2048M`
+
+# 解决数据倾斜
+
+## 使用Hive ETL预处理数据
 
 - 方案适用场景：
 
@@ -257,8 +330,7 @@ Executor由于内存不足或者堆外内存不足了，挂掉了，对应的Exe
 - 方案实现原理：
 
     这种方案从根源上解决了数据倾斜，因为彻底避免了在Spark中执行shuffle类算子，那么肯定就不会有数据倾斜的问题了。但是这里也要提醒一下大家，这种方式属于治标不治本。因为毕竟数据本身就存在分布不均匀的问题，所以Hive ETL中进行group by或者join等shuffle操作时，还是会出现数据倾斜，导致Hive ETL的速度很慢。我们只是把数据倾斜的发生提前到了Hive ETL中，避免Spark程序发生数据倾斜而已。
-    
-## 8.2 过滤少数导致倾斜的key
+## 过滤少数导致倾斜的key
 
 - 方案适用场景：
 
@@ -272,7 +344,7 @@ Executor由于内存不足或者堆外内存不足了，挂掉了，对应的Exe
 
     将导致数据倾斜的key给过滤掉之后，这些key就不会参与计算了，自然不可能产生数据倾斜。
 
-## 8.3 提高shuffle操作的并行度
+## 提高shuffle操作的并行度
 
 - 方案实现思路：
 
@@ -281,9 +353,8 @@ Executor由于内存不足或者堆外内存不足了，挂掉了，对应的Exe
 - 方案实现原理：
 
     增加shuffle read task的数量，可以让原本分配给一个task的多个key分配给多个task，从而让每个task处理比原来更少的数据。举例来说，如果原本有5个不同的key，每个key对应10条数据，这5个key都是分配给一个task的，那么这个task就要处理50条数据。而增加了shuffle read task以后，每个task就分配到一个key，即每个task就处理10条数据，那么自然每个task的执行时间都会变短了。
-    
 
-## 8.4 双重聚合
+## 双重聚合
 
 - 方案适用场景：
 
@@ -300,8 +371,7 @@ Executor由于内存不足或者堆外内存不足了，挂掉了，对应的Exe
     ![解决数据倾斜-双重聚合](./img/解决数据倾斜-双重聚合.png)
     
     如果一个RDD中有一个key导致数据倾斜，同时还有其他的key，那么一般先对数据集进行抽样，然后找出倾斜的key,再使用filter对原始的RDD进行分离为两个RDD，一个是由倾斜的key组成的RDD1，一个是由其他的key组成的RDD2，那么对于RDD1可以使用加随机前缀进行多分区多task计算，对于另一个RDD2正常聚合计算，最后将结果再合并起来。
-    
-## 8.5 将reduce join转为map join
+## 将reduce join转为map join
 
 BroadCast+filter(或者map)
 
@@ -317,19 +387,18 @@ BroadCast+filter(或者map)
 
     普通的join是会走shuffle过程的，而一旦shuffle，就相当于会将相同key的数据拉取到一个shuffle read task中再进行join，此时就是reduce join。但是如果一个RDD是比较小的，则可以采用广播小RDD全量数据+map算子来实现与join同样的效果，也就是map join，此时就不会发生shuffle操作，也就不会发生数据倾斜。
 
-## 8.6 采样倾斜key并分拆join操作
+## 采样倾斜key并分拆join操作
 
 - 方案适用场景：
 
     两个RDD/Hive表进行join的时候，如果数据量都比较大，无法采用“解决方案五”，那么此时可以看一下两个RDD/Hive表中的key分布情况。如果出现数据倾斜，是因为其中某一个RDD/Hive表中的少数几个key的数据量过大，而另一个RDD/Hive表中的所有key都分布比较均匀，那么采用这个解决方案是比较合适的。
     
 - 方案实现思路：
-    
+  
     对包含少数几个数据量过大的key的那个RDD，通过sample算子采样出一份样本来，然后统计一下每个key的数量，计算出来数据量最大的是哪几个key。然后将这几个key对应的数据从原来的RDD中拆分出来，形成一个单独的RDD，并给每个key都打上n以内的随机数作为前缀，而不会导致倾斜的大部分key形成另外一个RDD。接着将需要join的另一个RDD，也过滤出来那几个倾斜key对应的数据并形成一个单独的RDD，将每条数据膨胀成n条数据，这n条数据都按顺序附加一个0~n的前缀，不会导致倾斜的大部分key也形成另外一个RDD。再将附加了随机前缀的独立RDD与另一个膨胀n倍的独立RDD进行join，此时就可以将原先相同的key打散成n份，分散到多个task中去进行join了。而另外两个普通的RDD就照常join即可。最后将两次join的结果使用union算子合并起来即可，就是最终的join结果	。
     
     ![解决数据倾斜-采样倾斜key并分拆join操作.png](./img/解决数据倾斜-采样倾斜key并分拆join操作.png)
-    
-## 8.7 使用随机前缀和扩容RDD进行join
+## 使用随机前缀和扩容RDD进行join
 
 - 方案适用场景：
 
@@ -340,4 +409,8 @@ BroadCast+filter(或者map)
     该方案的实现思路基本和“解决方案六”类似，首先查看RDD/Hive表中的数据分布情况，找到那个造成数据倾斜的RDD/Hive表，比如有多个key都对应了超过1万条数据。然后将该RDD的每条数据都打上一个n以内的随机前缀。同时对另外一个正常的RDD进行扩容，将每条数据都扩容成n条数据，扩容出来的每条数据都依次打上一个0~n的前缀。最后将两个处理后的RDD进行join即可。
     
     ![解决数据倾斜-使用随机前缀和扩容RDD进行join](./img/解决数据倾斜-使用随机前缀和扩容RDD进行join.png)
-    
+
+
+
+###### THANKS
+

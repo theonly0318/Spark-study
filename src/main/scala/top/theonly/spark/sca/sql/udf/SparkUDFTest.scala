@@ -32,7 +32,7 @@ object SparkUDFTest {
      */
     session.udf.register("len", (name: String)=> name.length)
     // 在sql中使用自定义函数UDF
-    val frame1 = session.sql("select name, len(name) from a")
+    val frame1: DataFrame = session.sql("select name, len(name) from a")
     frame1.show()
 
     /**

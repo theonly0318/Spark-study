@@ -1,4 +1,13 @@
-# 1. SparkStreaming1.6 + Kafka0.8.2
+---
+title: SparkStreaming + Kafka
+author: theonly
+---
+
+###### SparkStreaming + Kafka
+
+[TOC]
+
+# SparkStreaming1.6 + Kafka0.8.2
 
 
 SparkStreaming1.6版本+Kafka0.8.2 版本整合方式有两种模式，一种是Receiver模式，另一种是Direct模式。
@@ -8,13 +17,13 @@ http://spark.apache.org/docs/1.6.0/streaming-programming-guide.html
 
 http://spark.apache.org/docs/1.6.0/streaming-kafka-integration.html
 
-## 1.1 Receiver模式
+## Receiver模式
 
-### 1.1.1 Receiver模式原理图
+### Receiver模式原理图
 
 ![Receiver模式原理图](./img/Receiver模式原理图.png)
 
-### 1.1.2 Receiver模式理解
+### Receiver模式理解
 
 Receiver模式中，SparkStreaming使用Receiver接收器模式来接收kafka中的数据，即会将每批次数据都存储在Spark端，默认的存储级别为`MEMORY_AND_DISK_SER_2`，从Kafka接收过来数据之后，还会将数据备份到其他Executor节点上，当完成备份之后，再将消费者offset数据写往zookeeper中，然后再向Driver汇报数据位置，Driver发送task到数据所在节点处理数据。
 
@@ -36,15 +45,16 @@ Receiver模式中，SparkStreaming使用Receiver接收器模式来接收kafka中
     数据在节点之间备份完成后再向checkpoint中备份，之后再向Zookeeper汇报数据offset，向Driver汇报数据位置，然后Driver发送task处理数据。这样加大了数据处理过程中的延迟。
     
     
+
 对于精准消费数据的问题，需要我们从每批次中获取offset然后保存到外部的数据库来实现来实现仅一次消费数据。但是Receiver模式底层读取Kafka数据的实现使用的是High Level Consumer Api，这种Api不支持获取每批次消费数据的offset。所以对于精准消费数据的场景不能使用这种模式。
 
-### 1.1.3 Receiver模式总结
+### Receiver模式总结
 1. Receiver模式采用了Receiver接收器的模式接收数据。会将每批次的数据存储在Executor内存或者磁盘中。
 2. Receiver模式有丢失数据问题，开启WAL机制解决，但是带来新的问题。
 3. receiver模式依赖zookeeper管理消费者offset。
 4. SparkStreaming读取Kafka数据，相当于Kafka的消费者，底层读取Kafka采用了`High Level Consumer API`实现，这种api没有提供操作每批次数据offset的接口，所以对于精准消费数据的场景想要人为控制offset是不可能的。
 
-### 1.1.4 Receiver模式代码实现
+### Receiver模式代码实现
 
 ```java
 SparkConf conf = new SparkConf().setAppName("SparkStreamingOnKafkaReceiver").setMaster("local[2]");
@@ -109,27 +119,27 @@ jsc.awaitTermination();
 jsc.close();
 ```
 
-### 1.1.5 Receiver的并行度设置
+### Receiver的并行度设置
 receiver的并行度是由`spark.streaming.blockInterval`来决定的，默认为200ms,假设`batchInterval`为5s,那么每隔`blockInterval`就会产生一个block,这里就对应每批次产生RDD的partition,这样5秒产生的这个DStream中的这个RDD的partition为25个，并行度就是25。如果想提高并行度可以减少`blockInterval`的数值，但是最好不要低于50ms。
 
-## 1.2 Direct模式
+## Direct模式
 
-### 1.2.1 Direct模式原理图
+### Direct模式原理图
 
 ![Direct模式原理图](./img/Direct模式原理图.png)
 
-### 1.2.2 Direct模式理解
+### Direct模式理解
 Direct模式就是将kafka看成存数据的一方，这种模式没有采用Receiver接收器模式，而是采用直连的方式，不是被动接收数据，而是主动去取数据，在处理每批次时会根据offset位置向Kafka中获取数据。
 
 消费者偏移量也不是用zookeeper来管理，而是使用Spark自己进行消费者偏移量的维护，如果没有设置checkpoint机制，消费偏移量默认是存在内存中，如果设置了checkpoint目录，那么消费偏移量也会保存在checkpoint中。当SparkStreaming停止后，我们可以使用`val  ssc = StreamFactory.getOrCreate(checkpointDir,Fun)`来恢复停止之前SparkStreaming处理数据的进度，当然，这种方式存在重复消费数据和逻辑改变之后不可执行的问题。
 
 Direct模式底层读取Kafka数据实现是`Simple Consumer api`实现，这种api提供了从每批次数据中获取`offset`的接口，所以对于精准消费数据的场景，可以使用Direct 模式手动维护offset方式来实现数据精准消费。
 
-### 1.2.3 Direct模式并行度设置
+### Direct模式并行度设置
 
 Direct模式的并行度与当前读取的topic的partition个数一致，所以Direct模式并行度由读取的kafka中topic的partition数决定的。
 
-### 1.2.4 Direct模式代码实现
+### Direct模式代码实现
 
 ```java
 SparkConf conf = new SparkConf().setMaster("local").setAppName("SparkStreamingOnKafkaDirected");
@@ -177,24 +187,24 @@ jsc.awaitTermination();
 jsc.close();
 ```
 
-# 2. SparkStreaming2.3 + kafka0.10.0 or higher  Direct模式
+# SparkStreaming2.3 + kafka0.10.0 or higher  Direct模式
 
 http://spark.apache.org/docs/2.3.1/streaming-programming-guide.html
 
 http://spark.apache.org/docs/2.3.1/streaming-kafka-0-10-integration.html
 
-## 2.1 SparkStreaming2.3+kafka 改变
+## SparkStreaming2.3+kafka 改变
 
 1. 丢弃了SparkStreaming+kafka 的receiver模式。
 2. 采用了新的消费者api实现，类似于1.6中SparkStreaming 读取 kafka Direct模式。并行度一样。
 3. 因为采用了新的消费者api实现，所以相对于1.6的Direct模式【simple api实现】 ，api使用上有很大差别。未来这种api有可能继续变化。
 4. kafka中有两个参数：
-    
+   
     `heartbeat.interval.ms`：这个值代表 kafka集群与消费者之间的心跳间隔时间，kafka 集群确保消费者保持连接的心跳通信时间间隔。这个时间默认是3s.这个值必须设置的比`session.timeout.ms` appropriately 小，一般设置不大于 `session.timeout.ms`的1/3。
     `session.timeout.ms`：这个值代表消费者与kafka之间的session 会话超时时间，如果在这个时间内，kafka 没有接收到消费者的心跳`heartbeat.interval.ms` 控制，那么kafka将移除当前的消费者。这个时间默认是10s。这个时间是位于 `group.min.session.timeout.ms`【6s】 和 `group.max.session.timeout.ms`【300s】之间的一个参数,如果SparkSteaming 批次间隔时间大于5分钟，也就是大于300s,那么就要相应的调大`group.max.session.timeout.ms` 这个值。
 
 5. 大多数情况下，SparkStreaming读取数据使用 `LocationStrategies.PreferConsistent` 这种策略，这种策略会将分区均匀的分布在集群的Executor之间。
-    
+   
     如果Executor在kafka 集群中的某些节点上，可以使用 `LocationStrategies.PreferBrokers` 这种策略，那么当前这个Executor 中的数据会来自当前broker节点。
 
     如果节点之间的分区有明显的分布不均，可以使用 `LocationStrategies.PreferFixed` 这种策略,可以通过一个map 指定将topic分区分布在哪些节点中。
@@ -215,8 +225,7 @@ http://spark.apache.org/docs/2.3.1/streaming-kafka-0-10-integration.html
         如果我们能保证完全处理完业务之后，可以后期异步的手动提交消费者offset。但是这种将offset存储在kafka中由参数`offsets.retention.minutes=1440`控制是否过期删除，默认是保存一天，如果停机没有消费达到时长，存储在kafka中的消费者组会被清空，offset也就被清除了。
         
    - 自己存储offset,这样在处理逻辑时，保证数据处理的事务，如果处理数据失败，就不保存offset，处理数据成功则保存offset.这样可以做到精准的处理一次处理数据。
-   
-## 2.2 代码实现
+## 代码实现
 ```scala
 val conf = new SparkConf()
 conf.setMaster("local")
@@ -276,13 +285,13 @@ ssc.awaitTermination()
 ssc.stop()
 ```
 
-## 2.3 手动维护消费者offset
+## 手动维护消费者offset
 
 `top.theonly.spark.jav.streaming.kafka.ManageOffsetUseRedis`
 
-## 2.4 参数配置
+## 参数配置
 
-### 2.4.1 Kafka参数配置：
+### Kafka参数配置：
 
 http://kafka.apache.org/0100/documentation.html
 
@@ -298,15 +307,16 @@ http://kafka.apache.org/0100/documentation.html
 - `group.max.session.timeout.ms`【300s】 
 - `auto.commit.interval.ms`   自动提交offset间隔时间 
 
-### 2.4.2 SparkStreaming参数配置：
+### SparkStreaming参数配置：
 
 http://spark.apache.org/docs/2.3.1/configuration.html
 
 - `spark.streaming.blockInterval` 
 
     SparkStreaming接收器接收的数据在存储到Spark之前被分块成数据块的间隔；建议值大于50ms；默认200ms 
+    
 - `spark.streaming.receiver.maxRate`  
- 
+
     每个接收器接收数据的最大速率（每秒记录数）。实际上，每个流最多每秒消耗这个记录数。将此配置设置为0或负数将不会对速率施加限制。
     
 - `spark.streaming.receiver.writeAheadLog.enable`
@@ -322,10 +332,17 @@ http://spark.apache.org/docs/2.3.1/configuration.html
     使用新的Kafka direct stream API时从每个Kafka分区读取数据的最大速率（每秒记录数）
     
 - `spark.streaming.backpressure.enabled` 
-    
+  
     启用或禁用Spark Streaming的内部背压机制（自1.5版起）。这使得Spark Streaming能够基于当前批调度延迟和处理时间来控制接收速率，以便系统接收的速度与系统处理的速度一样快。在内部，它动态地设置接收器的最大接收速率。如果设置了spark.streaming.receiver.maxRate和spark.streaming.kafka.maxRatePerPartition，则该速率的上限为它们。
     默认值false
     
 - `spark.streaming.backpressure.initialRate` 
 
     启用背压机制时每个接收器接收第一批数据的初始最大接收速率。
+
+
+
+###### THANKS
+
+
+

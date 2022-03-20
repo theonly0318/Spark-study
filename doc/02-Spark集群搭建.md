@@ -1,7 +1,16 @@
-Spark 集群搭建
+---
+title: Spark 集群搭建
+author: theonly
+---
+
+###### Spark 集群搭建
 
 
-# 1. 节点
+
+[TOC]
+
+
+# 节点
 | node1    | node2             | node3      | node4      |
 | -------- | ----------------- | ---------- | ---------- |
 | NameNode-1 | NameNode-2|            |            |
@@ -13,7 +22,7 @@ Spark 集群搭建
 |			| NodeManager-1 |	NodeManager-2	|	NodeManager-3	|
 | Spark MASTER | Spark Worker | Spark Worker | Spark Client |
 
-# 2. 下载安装包
+# 下载安装包
 
 [下载地址](http://spark.apache.org/downloads.html)
 
@@ -24,7 +33,7 @@ tar -zxvf spark-2.3.1-bin-hadoop2.6.tgz
 mv spark-2.3.1-bin-hadoop2.6 /opt/spark-2.3.1
 ```
 
-# 3. 配置
+#  配置
 
 - 配置`slaves`
 
@@ -59,21 +68,21 @@ mv spark-2.3.1-bin-hadoop2.6 /opt/spark-2.3.1
     export SPARK_WORKER_MEMORY=3g
     export JAVA_HOME=/usr/java/jdk1.8.0_221-amd64
     ```
-  
-  
-# 4. 同步至其他节点
+
+
+# 同步至其他节点
 ```shell script
 cd /opt
 scp -r ./spark-2.3.1/ node2:`pwd` &&  scp -r ./spark-2.3.1/ node3:`pwd`
 ```
 
-# 5. 启动集群
+# 启动集群
 ```shell script
 cd /opt/spark-2.3.1/sbin
 ./start-all.sh
 ```
 
-# 6. 搭建客户端
+# 搭建客户端
 
 将spark安装包原封不动的拷贝到一个新的节点上，然后，在新的节点上提交任务即可。
 
@@ -88,7 +97,7 @@ cd /opt/spark-2.3.1/sbin
 ```shell script
 export SPARK_MASTER_WEBUI_PORT=9999
 ```
-        
+
 2. 修改start-master.sh
 
 3. 在Master节点上导入临时环境变量，只是作用于之后的程序，重启就无效了。

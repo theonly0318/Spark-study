@@ -93,6 +93,18 @@ object WindowTest {
   }
 
   /**
+   * reduceByWindow(reduceFunc: (T, T) => T, windowDuration: Duration, slideDuration: Duration)
+   * @param streamingContext
+   * @param ds
+   */
+  def reduceByWindow(streamingContext: StreamingContext, ds: DStream[(String, Int)]):Unit = {
+    streamingContext.checkpoint("./data/streaming/ck2")
+    val resDS = ds.reduceByWindow((v1: (String, Int), v2: (String, Int)) => {return null},
+      Durations.seconds(15), Durations.seconds(5))
+    resDS.print()
+  }
+
+  /**
    * reduceByKeyAndWindow
    * reduceByKeyAndWindow(Function2<Integer, Integer, Integer>(), windowDuration: Duration, slideDuration: Duration)
    *

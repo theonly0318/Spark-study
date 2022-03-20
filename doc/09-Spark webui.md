@@ -1,5 +1,13 @@
+---
+title: Spark WebUI
+author: theonly
+---
 
-# 1. SparkUI界面介绍
+###### Spark WebUI
+
+[TOC]
+
+# SparkUI界面介绍
 
 可以指定提交Application的名称
 
@@ -7,9 +15,9 @@
 ./spark-shell --master  spark://node1:7077 --name myapp
 ```
 
-# 2. 配置historyServer
+# 配置historyServer
 
-## 2.1 临时配置
+## 临时配置
 
 对本次提交的应用程序起作用
 
@@ -22,7 +30,7 @@
 
 停止程序，在Web Ui中Completed Applications对应的ApplicationID中能查看history。
 
-## 2.2 spark-default.conf配置
+## spark-default.conf配置
 
 spark-default.conf配置文件中配置HistoryServer，对所有提交的Application都起作用
 
@@ -43,3 +51,8 @@ spark.eventLog.compress         true
 ./start-history-server.sh
 ```
 访问HistoryServer：node4:18080,之后所有提交的应用程序运行状况都会被记录。
+
+
+
+###### THANKS
+

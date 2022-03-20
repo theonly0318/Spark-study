@@ -84,6 +84,7 @@ object CreateDataFrameByRddTest {
 
     import session.implicits._
     val dsp: Dataset[MyPerson] = personRDD.toDS()
+//    val frame: DataFrame = session.sqlContext.createDataFrame(personRDD, Class[MyPerson])
     dsp.createTempView("tmp_person")
     session.sql("select * from tmp_person").show()
   }

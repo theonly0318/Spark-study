@@ -88,6 +88,21 @@ public class WindowTest {
     }
 
     /**
+     * reduceByWindow(new Function2(){}, 窗口长度, 滑动间隔)
+     * @param streamingContext
+     * @param dStream
+     */
+    public static void reduceByWindow(JavaStreamingContext streamingContext, JavaPairDStream<String, Integer> dStream) {
+        streamingContext.checkpoint("./data/streaming/ck");
+        dStream.reduceByWindow(new Function2<Tuple2<String, Integer>, Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+            @Override
+            public Tuple2<String, Integer> call(Tuple2<String, Integer> v1, Tuple2<String, Integer> v2) throws Exception {
+                return null;
+            }
+        }, Durations.seconds(15), Durations.seconds(5));
+    }
+
+    /**
      * reduceByKeyAndWindow
      * reduceByKeyAndWindow(Function2<Integer, Integer, Integer>(), windowDuration: Duration, slideDuration: Duration)
      * @param dStream

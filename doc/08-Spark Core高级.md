@@ -1,11 +1,19 @@
+---
+title: Spark Core 高级
+author； theonly
+---
 
-# 1. 广播变量
+###### Spark Core 高级
 
-## 1.1 广播变量理解图
+[TOC]
+
+# 广播变量
+
+## 广播变量理解图
 
 ![广播变量理解图](./img/广播变量理解图.png)
 
-## 1.2 广播变量使用代码
+## 广播变量使用代码
 ```java
 SparkConf conf = new SparkConf();
 conf.setMaster("local");
@@ -47,23 +55,23 @@ val filterRDD: RDD[String] = rdd.filter(line => {
 })
 filterRDD.foreach(println)
 ```
-## 1.3 注意事项
+## 注意事项
 
 - 能不能将一个RDD使用广播变量广播出去？
-    
+  
     不能，因为RDD是不存储数据的。可以将RDD的结果广播出去。
     
 - 广播变量只能在Driver端定义，不能在Executor端定义。
 
 - 在Driver端可以修改广播变量的值，在Executor端无法修改广播变量的值。
 
-# 2. 累加器
+# 累加器
 
-## 2.1 累加器理解图
+## 累加器理解图
 
 ![累加器理解图](./img/累加器理解图.png)
 
-## 2.2 累加器使用代码
+## 累加器使用代码
 ```java
 SparkConf conf = new SparkConf();
 conf.setMaster("local");
@@ -107,17 +115,17 @@ println(s"acc ${iAcc.name.get} is ${iAcc.count}")
 // 24
 println(iAcc.value)
 ```
-## 2.3 注意事项
+## 注意事项
 
 累加器在Driver端定义赋初始值，累加器只能在Driver端读取，在Excutor端更新。
 
 
-## 2.4 自定义累加器
+## 自定义累加器
 top.theonly.spark.jav.core.accumulator.SelfDefinedAccumulatorTest
 
 top.theonly.spark.sca.core.accumulator.SelfDefinedAccumulatorTest.scala
 
-# 3. 二次排序
+# 二次排序
 
 大数据中很多排序场景是需要先根据一列进行排序，如果当前列数据相同，再对其他某列进行排序的场景，这就是二次排序场景。
 
@@ -129,7 +137,7 @@ top.theonly.spark.sca.core.accumulator.SelfDefinedAccumulatorTest.scala
 
 `top.theonly.spark.sca.core.cases.secondsort.SecondSortCase`
 
-# 4. 分组取topN
+# 分组取topN
 
 大数据中按照某个Key进行分组，找出每个组内数据的topN时，这种情况就是分组取topN问题。
 
@@ -141,9 +149,9 @@ top.theonly.spark.sca.core.accumulator.SelfDefinedAccumulatorTest.scala
 
 `top.theonly.spark.sca.core.cases.topn.TopNCase`
 
-# 5. Spark Shuffle
+# Spark Shuffle
 
-## 5.1 概念
+## 概念
 
 reduceByKey会将上一个RDD中的每一个key对应的所有value聚合成一个value，然后生成一个新的RDD，元素类型是<key,value>对的形式，这样每一个key对应一个聚合起来的value。
 
@@ -153,18 +161,18 @@ reduceByKey会将上一个RDD中的每一个key对应的所有value聚合成一�
 - `Shuffle Write`：
 
     上一个stage的每个map task就必须保证将自己处理的当前分区的数据相同的key写入一个分区文件中，可能会写入多个不同的分区文件中。
- 
+
 - `Shuffle Read`：
 
     reduce task就会从上一个stage的所有task所在的机器上寻找属于己的那些分区文件，这样就可以保证每一个key所对应的value都会汇聚到同一个节点上去处理和聚合。
-    
+
 Spark中有两种Shuffle管理类型，`HashShufflManager`和`SortShuffleManager`。
 
 Spark1.2之前是HashShuffleManager， Spark1.2引入SortShuffleManager,在Spark 2.0+版本中已经将HashShuffleManager丢弃。
 
-## 5.2 HashShuffleManager
+## HashShuffleManager
 
-## 5.2.1 普通机制
+### 普通机制
 
 **普通机制示意图**
 
@@ -178,7 +186,7 @@ Spark1.2之前是HashShuffleManager， Spark1.2引入SortShuffleManager,在Spark
 **总结：**
 1. map task的计算结果会根据分区器（默认是hashPartitioner）来决定写入到哪一个磁盘小文件中去。ReduceTask会去Map端拉取相应的磁盘小文件。
 2. 产生的磁盘小文件的个数：
-    
+   
     M（map task的个数）*R（reduce task的个数）
 
 **存在的问题**：
@@ -190,7 +198,7 @@ Spark1.2之前是HashShuffleManager， Spark1.2引入SortShuffleManager,在Spark
 - 在JVM堆内存中对象过多会造成频繁的gc,gc还无法解决运行所需要的内存 的话，就会OOM。
 - 在数据传输过程中会有频繁的网络通信，频繁的网络通信出现通信故障的可能性大大增加，一旦网络通信出现了故障会导致shuffle file cannot find 由于这个错误导致的task失败，TaskScheduler不负责重试，由DAGScheduler负责重试Stage。
 
-### 5.2.2 合并机制
+### 合并机制
 **合并机制示意图**
 
 ![HashShuffleManager合并机制示意图](./img/HashShuffleManager合并机制示意图.png)
@@ -198,10 +206,10 @@ Spark1.2之前是HashShuffleManager， Spark1.2引入SortShuffleManager,在Spark
 **总结**
     
     产生磁盘小文件的个数：C(core的个数)*R（reduce的个数）
-    
-## 5.3 SortShuffleManager
 
-## 5.3.1 普通机制
+## SortShuffleManager
+
+### 普通机制
 
 **普通机制示意图**
 
@@ -220,8 +228,8 @@ Spark1.2之前是HashShuffleManager， Spark1.2引入SortShuffleManager,在Spark
 **总结**
     
     产生磁盘小文件的个数： 2*M（map task的个数）
-    
-### 5.3.2 bypass机制
+
+### bypass机制
 
 **bypass机制示意图**
 
@@ -234,43 +242,43 @@ Spark1.2之前是HashShuffleManager， Spark1.2引入SortShuffleManager,在Spark
     2. 产生的磁盘小文件为：2*M（map task的个数）
 
 
-# 6. Spark Shuffle 文件寻址
+# Spark Shuffle 文件寻址
 
-## 6.1 MapOutputTracker
+## MapOutputTracker
 
 `MapOutputTracker`是Spark架构中的一个模块，是一个主从架构。管理磁盘小文件的地址。
 - `MapOutputTrackerMaster`是主对象，存在于Driver中。
 - `MapOutputTrackerWorker`是从对象，存在于Executor中。
 
-## 6.2 BlockManager
+## BlockManager
 
 `BlockManager`块管理者，是Spark架构中的一个模块，也是一个主从架构。
 
 - `BlockManagerMaster`,主对象，存在于Driver中。
-    
+  
     BlockManagerMaster会在集群中有用到广播变量和缓存数据或者删除缓存数据的时候，通知BlockManagerSlave传输或者删除数据。
     
 - `BlockManagerSlave`，从对象，存在于Executor中。
 
     BlockManagerSlave会与BlockManagerSlave之间通信。
-    
+
 无论在Driver端的BlockManager还是在Executor端的BlockManager都含有三个对象：
 1. `DiskStore`:负责磁盘的管理。
 2. `MemoryStore`：负责内存的管理。
 3. `BlockTransferService`:负责数据的传输。
 
-## 6.3 Shuffle文件寻址图
+## Shuffle文件寻址图
 
 ![Shuffe文件寻址图](./img/Shuffe文件寻址图.png)
 
-## 6.4 Shuffle文件寻址流程
+## Shuffle文件寻址流程
 - 当map task执行完成后，会将task的执行情况和磁盘小文件的地址封装到`MpStatus`对象中，通过`MapOutputTrackerWorker`对象向Driver中的`MapOutputTrackerMaster`汇报。
 - 在所有的map task执行完毕后，Driver中就掌握了所有的磁盘小文件的地址。
 - 在reduce task执行之前，会通过Executor中`MapOutPutTrackerWorker`向Driver端的`MapOutputTrackerMaster`获取磁盘小文件的地址。
 - 获取到磁盘小文件的地址后，会通过`BlockManager`连接数据所在节点，然后通过`BlockTransferService`进行数据的传输。
 - `BlockTransferService`默认启动5个task去节点拉取数据。默认情况下，5个task拉取数据量不能超过48M。
 
-# 7. Spark 内存管理
+# Spark 内存管理
 Spark执行应用程序时，Spark集群会启动Driver和Executor两种JVM进程，Driver负责创建SparkContext上下文，提交任务，task的分发等。Executor负责task的计算任务，并将结果返回给Driver。同时需要为需要持久化的RDD提供储存。Driver端的内存管理比较简单，这里所说的Spark内存管理针对Executor端的内存管理。
 
 Spark内存管理分为***静态内存管理***和***统一内存管理***。
@@ -284,22 +292,22 @@ Spark1.6之前使用的是静态内存管理，Spark1.6之后引入了统一内�
 Spark1.6以上版本默认使用的是统一内存管理，可以通过参数`spark.memory.useLegacyMode` 设置为true(默认为false)使用静态内存管理。
 
 - 静态内存管理分布图
-    
+  
     ![静态内存管理分布图](./img/静态内存管理分布图.png)
     
 - 统一内存管理分布图
 
     ![统一内存管理分布图](./img/统一内存管理分布图.png)
-    
+
 **reduce 中OOM如何处理？**
 1. 减少每次拉取的数据量
 2. 提高shuffle聚合的内存比例
 3. 提高Executor的总内存
 
 
-# 8. Shuffle调优
+# Shuffle调优
 
-## 8.1 SparkShuffle调优配置项使用方式
+## SparkShuffle调优配置项使用方式
 
 - 在代码中,不推荐使用，硬编码。
     ```java
@@ -310,19 +318,19 @@ Spark1.6以上版本默认使用的是统一内存管理，可以通过参数`sp
     spark-submit --conf spark.shuffle.file.buffer=64 -conf ...
     ```
 - 在conf下的`spark-default.conf`配置文件中,不推荐
-    
+  
     因为是写死后所有应用程序都要用。
 
-## 8.2 Spark Shuffle调优参数
+## Spark Shuffle调优参数
 
 - `spark.reducer.maxSizeInFlight`
     - 默认值：48m
     - 参数说明：
-        
+      
         该参数用于设置shuffle read task的buffer缓冲大小，而这个buffer缓冲决定了每次能够拉取多少数据。
         
     - 调优建议：
-        
+      
         如果作业可用的内存资源较为充足的话，可以适当增加这个参数的大小（比如96m），从而减少拉取数据的次数，也就可以减少网络传输的次数，进而提升性能。在实践中发现，合理调节该参数，性能会有1%~5%的提升。
 
 - `spark.shuffle.io.maxRetries`
@@ -333,14 +341,14 @@ Spark1.6以上版本默认使用的是统一内存管理，可以通过参数`sp
     - 调优建议：
     
         对于那些包含了特别耗时的shuffle操作的作业，建议增加重试最大次数（比如60次），以避免由于JVM的full gc或者网络不稳定等因素导致的数据拉取失败。在实践中发现，对于针对超大数据量（数十亿~上百亿）的shuffle过程，调节该参数可以大幅度提升稳定性。
-shuffle file not find    taskScheduler不负责重试task，由DAGScheduler负责重试stage
+    shuffle file not find    taskScheduler不负责重试task，由DAGScheduler负责重试stage
 
 
 - `spark.shuffle.io.retryWait`
 
     - 默认值：5s
     - 参数说明：
-        
+      
         具体解释同上，该参数代表了每次重试拉取数据的等待间隔，默认是5s。
     
     - 调优建议：
@@ -360,4 +368,7 @@ shuffle file not find    taskScheduler不负责重试task，由DAGScheduler负�
     
         当你使用SortShuffleManager时，如果的确不需要排序操作，那么建议将这个参数调大一些，大于shuffle read task的数量。那么此时就会自动启用bypass机制，map-side就不会进行排序了，减少了排序的性能开销。但是这种方式下，依然会产生大量的磁盘文件，因此shuffle write性能有待提高。
 
+
+
+###### THANKS
 
