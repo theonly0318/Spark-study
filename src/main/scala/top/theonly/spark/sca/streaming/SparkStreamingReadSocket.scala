@@ -34,6 +34,8 @@ object SparkStreamingReadSocket {
 
     // 从socket服务中读取数据流（指定socket服务的主机名和端口），结果封装为ReceiverInputDStream
     val ds: ReceiverInputDStream[String] = streamingContext.socketTextStream("node0", 9999)
+    // 读取hdfs文件
+//    val ds: DStream[String] = streamingContext.textFileStream("hdfs://spark1:9000/wordcount_dir")
     val resDS: DStream[(String, Int)] =
       // 将每行数据按空格切分，每行一个单词，生成新的DStream
       ds.flatMap(line => line.split(" "))

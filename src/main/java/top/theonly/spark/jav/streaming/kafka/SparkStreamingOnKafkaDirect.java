@@ -142,7 +142,7 @@ public class SparkStreamingOnKafkaDirect {
                     System.out.println(o.topic() + " " + o.partition() + " " + o.fromOffset() + " " + o.untilOffset());
                 }
                 // 异步提交offset
-                ((CanCommitOffsets)stream).commitAsync(offsetRanges);
+                ((CanCommitOffsets)stream.inputDStream()).commitAsync(offsetRanges);
             }
         });
     }

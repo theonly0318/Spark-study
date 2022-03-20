@@ -44,6 +44,8 @@ public class SparkStreamingReadSocket {
 
         // 从socket服务中读取数据流（指定socket服务的主机名和端口），结果封装为ReceiverInputDStream
         JavaReceiverInputDStream<String> linesDS = streamingContext.socketTextStream("node0", 9999);
+        // 读取hdfs文件
+//        JavaDStream<String> linesDS = streamingContext.textFileStream("hdfs://spark1:9000/wordcount_dir");
         // 将每行数据按空格切分，每行一个单词，生成新的DStream
         JavaDStream<String> wordDS = linesDS.flatMap(new FlatMapFunction<String, String>() {
             @Override

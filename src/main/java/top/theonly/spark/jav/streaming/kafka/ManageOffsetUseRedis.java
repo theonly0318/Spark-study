@@ -82,7 +82,7 @@ public class ManageOffsetUseRedis {
         stream.foreachRDD(record -> {
             OffsetRange[] offsetRanges = ((HasOffsetRanges) record.rdd()).offsetRanges();
             /**
-             * 将当前批次最后的所有分区offsets 保存到 Redis中
+             * 将当前批次最后的所有分区offsets  Redis中保存到
              */
             saveOffsetToRedis(0, offsetRanges);
         });
